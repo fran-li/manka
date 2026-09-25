@@ -1,10 +1,12 @@
 package pe.edu.utec.manka.service;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pe.edu.utec.manka.dto.PlatoResponseDto;
 import pe.edu.utec.manka.entity.Plato;
 import pe.edu.utec.manka.entity.Usuario;
+import pe.edu.utec.manka.event.FavoriteAddedEvent;
 import pe.edu.utec.manka.exception.ConflictException;
 import pe.edu.utec.manka.exception.ResourceNotFoundException;
 import pe.edu.utec.manka.repository.PlatoRepository;
@@ -18,15 +20,18 @@ public class FavoritoService {
     private final UsuarioRepository usuarioRepository;
     private final PlatoRepository platoRepository;
     private final PlatoService platoService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public FavoritoService(
             UsuarioRepository usuarioRepository,
             PlatoRepository platoRepository,
-            PlatoService platoService) {
+            PlatoService platoService,
+            ApplicationEventPublisher eventPublisher) {
 
         this.usuarioRepository = usuarioRepository;
         this.platoRepository = platoRepository;
         this.platoService = platoService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -47,6 +52,13 @@ public class FavoritoService {
 
         user.getFavoritos().add(dish);
         usuarioRepository.save(user);
+        eventPublisher.publishEvent(new FavoriteAddedEvent(
+                this,
+                user.getId(),
+                user.getEmail(),
+                dish.getId(),
+                dish.getNombre()
+        ));
     }
 
     @Transactional
