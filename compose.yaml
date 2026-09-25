@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: manka-postgres
+    environment:
+      POSTGRES_DB: manka
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - manka_pgdata:/var/lib/postgresql/data
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: manka-mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+volumes:
+  manka_pgdata:
