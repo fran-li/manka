@@ -1,5 +1,6 @@
 package pe.edu.utec.manka.service;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pe.edu.utec.manka.dto.HistorialRequestDto;
@@ -7,6 +8,7 @@ import pe.edu.utec.manka.dto.HistorialResponseDto;
 import pe.edu.utec.manka.entity.HistorialCocina;
 import pe.edu.utec.manka.entity.Plato;
 import pe.edu.utec.manka.entity.Usuario;
+import pe.edu.utec.manka.event.DishCookedEvent;
 import pe.edu.utec.manka.exception.ResourceNotFoundException;
 import pe.edu.utec.manka.repository.HistorialCocinaRepository;
 import pe.edu.utec.manka.repository.PlatoRepository;
@@ -20,13 +22,16 @@ public class HistorialService {
     private final HistorialCocinaRepository historialRepository;
     private final PlatoRepository platoRepository;
     private final UsuarioRepository usuarioRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public HistorialService(HistorialCocinaRepository historialRepository,
                             PlatoRepository platoRepository,
-                            UsuarioRepository usuarioRepository) {
+                            UsuarioRepository usuarioRepository,
+                            ApplicationEventPublisher eventPublisher) {
         this.historialRepository = historialRepository;
         this.platoRepository = platoRepository;
         this.usuarioRepository = usuarioRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -40,7 +45,18 @@ public class HistorialService {
         history.setUsuario(user);
         history.setPlato(dish);
         history.setCocinadoEn(LocalDateTime.now());
-        return toResponse(historialRepository.save(history));
+
+        HistorialCocina saved = historialRepository.save(history);
+        eventPublisher.publishEvent(new DishCookedEvent(
+                this,
+                saved.getId(),
+                user.getEmail(),
+                user.getFirstName(),
+                dish.getId(),
+                dish.getNombre(),
+                saved.getCocinadoEn()
+        ));
+        return toResponse(saved);
     }
 
     @Transactional(readOnly = true)
