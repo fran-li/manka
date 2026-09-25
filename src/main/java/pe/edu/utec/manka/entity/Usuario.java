@@ -23,6 +23,16 @@ public class Usuario {
     @Column(nullable = false)
     private String password;
 
+
+    @ManyToMany
+    @JoinTable(
+            name = "user_roles",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id"),
+            uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "role_id"})
+    )
+    private Set<Rol> roles = new HashSet<>();
+
     @ManyToMany
     @JoinTable(
             name = "user_pantry",
@@ -49,6 +59,8 @@ public class Usuario {
     public void setEmail(String email) { this.email = email; }
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
+    public Set<Rol> getRoles() { return roles; }
+    public void setRoles(Set<Rol> roles) { this.roles = roles; }
     public Set<Ingrediente> getDespensa() { return despensa; }
     public void setDespensa(Set<Ingrediente> despensa) { this.despensa = despensa; }
     public Set<Plato> getFavoritos() { return favoritos; }
