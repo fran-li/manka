@@ -100,7 +100,7 @@ INSERT INTO dish_ingredients (id, dish_id, ingredient_id, quantity_text, is_requ
 (13, 2, 37, '1 cucharada', true),
 (14, 2, 8, '2 cucharadas', true),
 
--- 3 Estofado de pollo: 11 ingredientes; con solo pollo la cobertura ronda 9%
+-- 3 Estofado de pollo
 (15, 3, 3, '4 piezas', true),
 (16, 3, 12, '3 unidades', true),
 (17, 3, 28, '1 unidad', true),
@@ -217,24 +217,6 @@ SELECT setval(pg_get_serial_sequence('ingredients', 'id'), COALESCE((SELECT MAX(
 SELECT setval(pg_get_serial_sequence('dishes', 'id'), COALESCE((SELECT MAX(id) FROM dishes), 1), true);
 SELECT setval(pg_get_serial_sequence('dish_ingredients', 'id'), COALESCE((SELECT MAX(id) FROM dish_ingredients), 1), true);
 
--- ================================================================
--- MANKA - EXTENSION DE 200 RECETAS DESDE main.csv
--- ================================================================
--- Generado a partir del CSV proporcionado por el usuario.
--- Mantiene intactos los IDs originales de Manka:
---   ingredientes 1..42, platos 1..12, dish_ingredients 1..104.
---
--- Seleccion: 200 recetas de buena calidad de parseo, balanceadas:
---   50 Pollo, 50 Res, 50 Pescado, 50 Vegetariano.
---
--- Reglas de adaptacion:
---   * Duracion HH:MM -> preparation_minutes.
---   * Dificultad baja/muy baja -> FACIL; media -> MEDIA; alta/muy alta -> DIFICIL.
---   * Si dificultad falta: <=30 FACIL, 31..60 MEDIA, >60 DIFICIL.
---   * Valoracion (0..5) -> popularity_score (0..100); si falta -> 80.
---   * Ingredientes normalizados para reducir duplicados y reutilizar los 42 existentes.
---   * Ingredientes marcados como 'opcional' -> is_required=false.
--- ================================================================
 
 INSERT INTO ingredients (id, name, parent_id) VALUES
 (43, 'Brócoli', NULL),
