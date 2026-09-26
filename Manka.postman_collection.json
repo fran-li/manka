@@ -1,8 +1,8 @@
 {
   "info": {
-    "name": "Manka — Backend API Tests + Async + Roles",
-    "_postman_id": "2541de35-47cd-4697-9c1c-ef5bfa512c14",
-    "description": "Colección de pruebas automáticas para el backend de Manka.\n\nCómo usarla:\n1. Levanta PostgreSQL/Docker y luego ejecuta la API de Manka.\n2. Por defecto se asume http://localhost:8083; puedes cambiar `baseUrl` en el environment.\n3. Importa esta colección y `Manka-Async.postman_environment.json` en Postman.\n4. Selecciona el environment `Manka - Local Async`.\n5. Ejecuta la colección completa con Collection Runner EN ORDEN.\n\nLa colección crea un usuario único en cada corrida, obtiene un JWT y reutiliza ese token en los endpoints protegidos. Las pruebas usan los IDs sembrados por data.sql: ingrediente 1 = Pollo, ingrediente 4 = Arroz y plato 1 = Arroz chaufa de pollo.\n\nSe validan: autenticación, catálogo y búsqueda de ingredientes, platos y filtro de tiempo, recomendaciones (ranking, cobertura > 0 y límite de tiempo), despensa, historial y penalización por repetición, favoritos, 404, 409, validación 400, JSON inválido y 401 sin token.\n\nVersión Async Events:\n- POST /users/register dispara UserRegisteredEvent y correo de bienvenida.\n- POST /history dispara DishCookedEvent y correo de plato cocinado.\n- POST /favorites/{dishId} dispara FavoriteAddedEvent.\n- Los eventos se procesan de forma asíncrona después del commit.\n- Con Mailpit puedes inspeccionar correos en http://localhost:8025.\n\nSeguridad añadida: roles USER/ADMIN, endpoints ADMIN, refresh token rotativo y logout.",
+    "name": "Manka — Backend API Tests + Async + Roles + 212 Recipes",
+    "_postman_id": "69c077dd-4f41-46f6-8b71-a9fb1cd83260",
+    "description": "Colección de pruebas automáticas para el backend de Manka.\n\nCómo usarla:\n1. Levanta PostgreSQL/Docker y luego ejecuta la API de Manka.\n2. Por defecto se asume http://localhost:8083; puedes cambiar `baseUrl` en el environment.\n3. Importa esta colección y `Manka-Async.postman_environment.json` en Postman.\n4. Selecciona el environment `Manka - Local Async`.\n5. Ejecuta la colección completa con Collection Runner EN ORDEN.\n\nLa colección crea un usuario único en cada corrida, obtiene un JWT y reutiliza ese token en los endpoints protegidos. Las pruebas usan los IDs sembrados por data.sql: ingrediente 1 = Pollo, ingrediente 4 = Arroz y plato 1 = Arroz chaufa de pollo.\n\nSe validan: autenticación, catálogo y búsqueda de ingredientes, platos y filtro de tiempo, recomendaciones (ranking, cobertura > 0 y límite de tiempo), despensa, historial y penalización por repetición, favoritos, 404, 409, validación 400, JSON inválido y 401 sin token.\n\nVersión Async Events:\n- POST /users/register dispara UserRegisteredEvent y correo de bienvenida.\n- POST /history dispara DishCookedEvent y correo de plato cocinado.\n- POST /favorites/{dishId} dispara FavoriteAddedEvent.\n- Los eventos se procesan de forma asíncrona después del commit.\n- Con Mailpit puedes inspeccionar correos en http://localhost:8025.\n\nSeguridad añadida: roles USER/ADMIN, endpoints ADMIN, refresh token rotativo y logout.\n\nCatálogo ampliado:\n- Adaptado para data.sql con 212 platos (12 originales + 200 importados).\n- Los tests de historial usan una baseline específica del Arroz chaufa para no depender del top 20 de un catálogo grande.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -49,6 +49,10 @@
     {
       "key": "adminToken",
       "value": ""
+    },
+    {
+      "key": "initialChaufaScoreHistory",
+      "value": ""
     }
   ],
   "item": [
@@ -68,7 +72,8 @@
                   "pm.collectionVariables.set('userEmail', `manka.${suffix}@test.com`);",
                   "pm.collectionVariables.set('userPassword', 'manka123');",
                   "pm.collectionVariables.set('jwtToken', '');",
-                  "pm.collectionVariables.set('initialChaufaScore60', '');"
+                  "pm.collectionVariables.set('initialChaufaScore60', '');",
+                  "pm.collectionVariables.set('initialChaufaScoreHistory', '');"
                 ]
               }
             },
@@ -284,10 +289,10 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('[2.1] Se cargaron los 12 platos del catálogo', function () {",
+                  "pm.test('[2.1] Se cargaron al menos 212 platos del catálogo ampliado', function () {",
                   "    const data = pm.response.json();",
                   "    pm.expect(data).to.be.an('array');",
-                  "    pm.expect(data.length).to.eql(12);",
+                  "    pm.expect(data.length).to.be.at.least(212);",
                   "});",
                   "",
                   "pm.test('[2.1] Los platos incluyen ingredientes (no null)', function () {",
@@ -643,6 +648,60 @@
       "name": "5. Historial y penalización",
       "item": [
         {
+          "name": "5.0 Baseline Chaufa antes de cocinar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json();",
+                  "const chaufa = data.find(x => x.platoId === 1);",
+                  "",
+                  "pm.test('[5.0] Baseline responde 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('[5.0] Chaufa aparece antes de registrar historial', function () {",
+                  "    pm.expect(chaufa).to.exist;",
+                  "});",
+                  "",
+                  "pm.test('[5.0] Guarda score inicial del chaufa', function () {",
+                  "    pm.expect(chaufa.breakdown.repetition).to.eql(100);",
+                  "    pm.collectionVariables.set('initialChaufaScoreHistory', String(chaufa.score));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/recommendations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "recommendations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ingredientIds\": [1, 4, 5, 6, 7, 8],\n  \"availableMinutes\": 20,\n  \"limit\": 20\n}"
+            }
+          }
+        },
+        {
           "name": "5.1 Marcar Arroz chaufa como cocinado",
           "event": [
             {
@@ -750,7 +809,7 @@
                   "});",
                   "",
                   "pm.test('[5.3] El score del chaufa baja respecto al score previo', function () {",
-                  "    const initial = Number(pm.collectionVariables.get('initialChaufaScore60'));",
+                  "    const initial = Number(pm.collectionVariables.get('initialChaufaScoreHistory'));",
                   "    pm.expect(initial).to.be.above(0);",
                   "    pm.expect(chaufa.score).to.be.below(initial);",
                   "});",
@@ -786,7 +845,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"ingredientIds\": [1, 4],\n  \"availableMinutes\": 60,\n  \"limit\": 20\n}"
+              "raw": "{\n  \"ingredientIds\": [1, 4, 5, 6, 7, 8],\n  \"availableMinutes\": 20,\n  \"limit\": 20\n}"
             }
           }
         }

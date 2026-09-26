@@ -137,8 +137,8 @@ class RecommendationControllerTest extends AbstractContainerBaseTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "ingredientIds": [1, 4],
-                                  "availableMinutes": 60,
+                                  "ingredientIds": [1, 4, 5, 6, 7, 8],
+                                  "availableMinutes": 20,
                                   "limit": 20
                                 }
                                 """))
